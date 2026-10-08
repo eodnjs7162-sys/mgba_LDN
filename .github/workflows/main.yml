@@ -1,0 +1,62 @@
+name: Build mGBA_LDN Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            base-devel
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-qt5-base
+            mingw-w64-ucrt-x86_64-SDL2
+            mingw-w64-ucrt-x86_64-libzip
+            mingw-w64-ucrt-x86_64-ffmpeg
+            mingw-w64-ucrt-x86_64-lua
+            mingw-w64-ucrt-x86_64-pkgconf
+
+      - name: Configure
+        shell: msys2 {0}
+        run: |
+          cmake -S . -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/mingw64
+
+      - name: Build
+        shell: msys2 {0}
+        run: |
+          cmake --build build --parallel
+
+      - name: Install
+        shell: msys2 {0}
+        run: |
+          cmake --install build
+
+      - name: Package
+        shell: msys2 {0}
+        run: |
+          cd build
+          cpack -G ZIP
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: mGBA_LDN-Windows
+          path: build/*.zip
